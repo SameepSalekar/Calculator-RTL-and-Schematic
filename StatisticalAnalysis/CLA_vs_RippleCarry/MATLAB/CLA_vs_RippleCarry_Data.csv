@@ -1,0 +1,24 @@
+Category,Metric,Unit,RCA,CLA
+Resource,Synthesis LUTs,count,8,8
+Resource,Implementation LUTs,count,8,8
+Resource,Implementation Slices,count,2,2
+Resource,Registers,count,0,0
+Resource,DSPs,count,0,0
+Resource,Bonded IOBs,count,17,17
+Primitive,LUT6,count,4,4
+Primitive,LUT5,count,3,3
+Primitive,LUT4,count,1,1
+Primitive,LUT3,count,0,1
+Primitive,LUT2,count,3,1
+Primitive,IBUF,count,9,9
+Primitive,OBUF,count,8,8
+Timing,Worst Routed Path Delay,ns,8.178,8.456
+Timing,Worst Path Logic Delay,ns,4.257,3.778
+Timing,Worst Path Routing Delay,ns,3.92,4.678
+Timing,Worst Path Logic Levels,count,4,4
+Power,Total On-Chip Power,W,6.132,6.134
+Power,Dynamic Power,W,6.036,6.038
+Power,Device Static Power,W,0.096,0.096
+Power,Slice Logic Power,W,0.045,0.045
+Power,Signal Power,W,0.106,0.108
+Power,IO Power,W,5.886,5.886
