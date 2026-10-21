@@ -1,0 +1,85 @@
+CLA vs Ripple-Carry Adder/Subtractor FPGA Analysis
+==================================================
+
+Experimental Configuration
+--------------------------
+Target FPGA: Xilinx Artix-7 xc7a35tcpg236-1
+Vivado Version: 2026.1
+Datapath Width: 4 bits
+
+1. FPGA RESOURCE UTILIZATION
+----------------------------
+Implemented LUTs:
+  Ripple-Carry: 8
+  Carry-Lookahead: 8
+  Difference (CLA - RCA): 0
+  Relative Change: 0.00 %
+
+Implemented Slices:
+  Ripple-Carry: 2
+  Carry-Lookahead: 2
+  Difference (CLA - RCA): 0
+  Relative Change: 0.00 %
+
+Interpretation:
+Both implementations used the same overall physical FPGA resource footprint: 8 LUTs and 2 slices. The LUT primitive composition differed, indicating that Vivado mapped the two architectures into different underlying Boolean structures while achieving identical physical utilization.
+
+2. ROUTED TIMING ANALYSIS
+-------------------------
+Worst Routed Input-to-Output Path:
+  Ripple-Carry: 8.178 ns
+  Carry-Lookahead: 8.456 ns
+  Difference (CLA - RCA): 0.278 ns
+  CLA Relative Change: 3.40 %
+  CLA/RCA Delay Ratio: 1.03399
+
+Worst-Path Logic Delay:
+  Ripple-Carry: 4.257 ns
+  Carry-Lookahead: 3.778 ns
+  Difference (CLA - RCA): -0.479 ns
+  CLA Relative Change: -11.25 %
+
+Worst-Path Routing Delay:
+  Ripple-Carry: 3.920 ns
+  Carry-Lookahead: 4.678 ns
+  Difference (CLA - RCA): 0.758 ns
+  CLA Relative Change: 19.34 %
+
+Interpretation:
+For these implemented 4-bit designs, the Ripple-Carry design exhibited a lower whole-module worst-case routed path delay. The Carry-Lookahead design reduced logic delay, but its higher routing delay outweighed that reduction on the reported worst path. The result is specific to these implemented Artix-7 designs and should not be interpreted as an inherent timing advantage of ripple-carry architecture.
+
+Timing Caveat:
+The comparison uses routed combinational input-to-output paths. No clock-based maximum-frequency or timing-closure claim is made from these measurements.
+
+3. VIVADO POWER ESTIMATION
+--------------------------
+Total On-Chip Power:
+  Ripple-Carry: 6.132 W
+  Carry-Lookahead: 6.134 W
+  Difference (CLA - RCA): 0.002 W
+  CLA Relative Change: 0.0326 %
+  CLA/RCA Power Ratio: 1.00033
+
+Dynamic Power:
+  Ripple-Carry: 6.036 W
+  Carry-Lookahead: 6.038 W
+  Difference (CLA - RCA): 0.002 W
+
+Device Static Power:
+  Ripple-Carry: 0.096 W
+  Carry-Lookahead: 0.096 W
+  Difference (CLA - RCA): 0.000 W
+
+Interpretation:
+The two architectures produced effectively equivalent Vivado power estimates. The Carry-Lookahead estimate was only 0.002 W higher than the Ripple-Carry estimate. The reported difference originated from estimated signal power, while slice-logic, I/O, and static-power estimates were identical at report precision.
+
+Power Caveat:
+These values are Vivado estimates rather than measured board power. The reports have low confidence because switching activity was not fully specified, and the estimates are dominated by I/O power. Therefore, the small power difference should not be interpreted as a significant real-world power advantage for either architecture.
+
+4. OVERALL CONCLUSION
+---------------------
+At a 4-bit datapath width on the selected Artix-7 FPGA, both architectures achieved identical overall LUT and slice utilization after implementation. Their internal LUT primitive composition differed, demonstrating architecture-dependent mapping despite equal physical utilization.
+
+The Carry-Lookahead implementation reduced the logic portion of its reported worst path but incurred greater routing delay, resulting in a 3.40% higher whole-module worst routed path delay for this implementation. Power estimates were effectively equivalent, differing by approximately 0.033%.
+
+These results demonstrate that RTL architectural differences do not necessarily translate directly into differences in final FPGA resource utilization, timing, or estimated power because synthesis, technology mapping, placement, and routing also affect the implemented hardware.
