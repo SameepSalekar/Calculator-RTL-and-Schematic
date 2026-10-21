@@ -1,0 +1,55 @@
+COMBINATIONAL VS SEQUENTIAL MULTIPLIER ANALYSIS
+================================================
+
+RESOURCE UTILIZATION
+--------------------
+Implementation LUTs: 126 -> 63
+LUT change: -63 (-50.00%)
+Implementation slices: 38 -> 20
+Slice change: -18 (-47.37%)
+Registers: 0 -> 50
+Bonded IOBs: 33 -> 38
+IOB change: 5 (15.15%)
+
+PRIMITIVE MAPPING
+-----------------
+CARRY4: 14 -> 8
+CARRY4 change: -6 (-42.86%)
+
+TIMING / LATENCY
+----------------
+Combinational worst routed input-to-output path: 19.436 ns
+  Logic delay: 7.282 ns
+  Routing delay: 12.154 ns
+  Logic levels: 15
+
+Sequential longest reported register/control path: 3.343 ns
+  Logic delay: 0.580 ns
+  Routing delay: 2.763 ns
+  Logic levels: 2
+  Arithmetic iterations: 8
+
+IMPORTANT: These two timing measurements are not equivalent
+operation-latency measurements. No sequential Fmax or absolute
+operation latency is claimed because no clock constraint was
+defined for the sequential implementation.
+
+POWER ESTIMATION
+----------------
+Total on-chip power: 20.719 W -> 9.843 W
+Numerical total-power change: -10.876 W (-52.49%)
+Dynamic power: 20.234 W -> 9.707 W (-52.03%)
+Slice-logic power change: -74.11%
+Signal power change: -66.30%
+I/O power change: -49.98%
+Combinational I/O fraction of total power: 87.79%
+Sequential I/O fraction of total power: 92.44%
+
+POWER LIMITATIONS
+-----------------
+Both Vivado power reports have Low overall confidence.
+The estimates are dominated by I/O power and do not use a
+simulation activity file. The sequential design also lacks a
+defined clock constraint. Therefore, the reported wattages are
+implementation estimates under Vivado assumptions, not measured
+board-level power consumption.
