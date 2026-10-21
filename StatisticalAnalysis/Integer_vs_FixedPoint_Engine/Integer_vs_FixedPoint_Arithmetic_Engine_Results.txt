@@ -1,0 +1,67 @@
+INTEGER VS FIXED-POINT ARITHMETIC ENGINE ANALYSIS
+=================================================
+
+RESOURCE UTILIZATION
+--------------------
+Implemented LUTs: Integer = 584, Fixed-Point = 521
+Difference (Fixed-Point - Integer) = -63 (-10.79%)
+
+Implemented slices: Integer = 179, Fixed-Point = 161
+Difference (Fixed-Point - Integer) = -18 (-10.06%)
+
+Registers: Integer = 203, Fixed-Point = 163
+Difference (Fixed-Point - Integer) = -40 (-19.70%)
+
+F7 Muxes: Integer = 9, Fixed-Point = 2
+Difference (Fixed-Point - Integer) = -7 (-77.78%)
+
+Integer synthesis-to-implementation LUT change = -4 (-0.68%)
+Fixed-Point synthesis-to-implementation LUT change = -6 (-1.14%)
+
+PRIMITIVE MAPPING
+-----------------
+LUT6: Integer = 248, Fixed-Point = 161, Change = -87 (-35.08%)
+LUT5: Integer = 78, Fixed-Point = 85, Change = 7 (8.97%)
+LUT4: Integer = 67, Fixed-Point = 97, Change = 30 (44.78%)
+LUT3: Integer = 104, Fixed-Point = 121, Change = 17 (16.35%)
+LUT2: Integer = 100, Fixed-Point = 105, Change = 5 (5.00%)
+LUT1: Integer = 75, Fixed-Point = 71, Change = -4 (-5.33%)
+CARRY4: Integer = 67, Fixed-Point = 70, Change = 3 (4.48%)
+FDRE: Integer = 199, Fixed-Point = 159, Change = -40 (-20.10%)
+FDSE: Integer = 4, Fixed-Point = 4, Change = 0
+MUXF7: Integer = 9, Fixed-Point = 2, Change = -7 (-77.78%)
+
+TIMING ANALYSIS
+---------------
+Longest reported register-to-register path:
+Integer = 4.082 ns
+Fixed-Point = 4.378 ns
+Difference = 0.296 ns (7.25%)
+
+Logic delay: Integer = 1.957 ns, Fixed-Point = 1.941 ns
+Logic delay difference = -0.016 ns (-0.82%)
+
+Routing delay: Integer = 2.125 ns, Fixed-Point = 2.437 ns
+Routing delay difference = 0.312 ns (14.68%)
+
+Logic levels: Integer = 7, Fixed-Point = 6
+
+NOTE: Timing values are unconstrained routed register-to-register paths.
+No maximum clock frequency, timing closure, or overall engine speed advantage is claimed.
+
+POWER ANALYSIS
+--------------
+Total power: Integer = 16.077 W, Fixed-Point = 12.463 W
+Difference = -3.614 W (-22.48%)
+
+Dynamic power change = -3.506 W (-22.21%)
+Static power change = -0.107 W (-36.64%)
+Slice logic power change = 0.155 W (4.71%)
+Signal power change = 0.112 W (3.97%)
+I/O power change = -3.775 W (-39.02%)
+
+Integer I/O fraction of total estimate = 60.18%
+Fixed-Point I/O fraction of total estimate = 47.34%
+
+NOTE: Vivado power estimates have Low overall confidence and lack simulation-derived activity data.
+The values are not measured board-level power consumption.
