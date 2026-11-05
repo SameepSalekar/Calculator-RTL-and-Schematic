@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="FP16ArithmeticEngine_TB_behav.wdb" id="1">
+         <top_modules>
+            <top_module name="FP16ArithmeticEngine_TB" />
+            <top_module name="glbl" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="0.000 ns"></ZoomStartTime>
+      <ZoomEndTime time="1,243.044 ns"></ZoomEndTime>
+      <Cursor1Time time="0.000 ns"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="813"></NameColumnWidth>
+      <ValueColumnWidth column_width="124"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="6" />
+   <wvobject fp_name="group42" type="group">
+      <obj_property name="label">Control</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/clk" type="logic">
+         <obj_property name="ElementShortName">clk</obj_property>
+         <obj_property name="ObjectShortName">clk</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/reset" type="logic">
+         <obj_property name="ElementShortName">reset</obj_property>
+         <obj_property name="ObjectShortName">reset</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/Start" type="logic">
+         <obj_property name="ElementShortName">Start</obj_property>
+         <obj_property name="ObjectShortName">Start</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/Clear" type="logic">
+         <obj_property name="ElementShortName">Clear</obj_property>
+         <obj_property name="ObjectShortName">Clear</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="group43" type="group">
+      <obj_property name="label">Operand and Data</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/Operation" type="array">
+         <obj_property name="ElementShortName">Operation[3:0]</obj_property>
+         <obj_property name="ObjectShortName">Operation[3:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/OperandA" type="array">
+         <obj_property name="ElementShortName">OperandA[15:0]</obj_property>
+         <obj_property name="ObjectShortName">OperandA[15:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/OperandB" type="array">
+         <obj_property name="ElementShortName">OperandB[15:0]</obj_property>
+         <obj_property name="ObjectShortName">OperandB[15:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/Result" type="array">
+         <obj_property name="ElementShortName">Result[15:0]</obj_property>
+         <obj_property name="ObjectShortName">Result[15:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/WideResult" type="array">
+         <obj_property name="ElementShortName">WideResult[31:0]</obj_property>
+         <obj_property name="ObjectShortName">WideResult[31:0]</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="group44" type="group">
+      <obj_property name="label">Execution Status</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/Busy" type="logic">
+         <obj_property name="ElementShortName">Busy</obj_property>
+         <obj_property name="ObjectShortName">Busy</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/Done" type="logic">
+         <obj_property name="ElementShortName">Done</obj_property>
+         <obj_property name="ObjectShortName">Done</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="group45" type="group">
+      <obj_property name="label">Arithmetic Exceptions</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/InvalidOperation" type="logic">
+         <obj_property name="ElementShortName">InvalidOperation</obj_property>
+         <obj_property name="ObjectShortName">InvalidOperation</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/DivideByZero" type="logic">
+         <obj_property name="ElementShortName">DivideByZero</obj_property>
+         <obj_property name="ObjectShortName">DivideByZero</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/Overflow" type="logic">
+         <obj_property name="ElementShortName">Overflow</obj_property>
+         <obj_property name="ObjectShortName">Overflow</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/Underflow" type="logic">
+         <obj_property name="ElementShortName">Underflow</obj_property>
+         <obj_property name="ObjectShortName">Underflow</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/Inexact" type="logic">
+         <obj_property name="ElementShortName">Inexact</obj_property>
+         <obj_property name="ObjectShortName">Inexact</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="/FP16ArithmeticEngine_TB/ExceptionVector" type="array">
+      <obj_property name="ElementShortName">ExceptionVector[4:0]</obj_property>
+      <obj_property name="ObjectShortName">ExceptionVector[4:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="group51" type="group">
+      <obj_property name="label">Comparison Flags</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/Greater" type="logic">
+         <obj_property name="ElementShortName">Greater</obj_property>
+         <obj_property name="ObjectShortName">Greater</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/Equal" type="logic">
+         <obj_property name="ElementShortName">Equal</obj_property>
+         <obj_property name="ObjectShortName">Equal</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/Lesser" type="logic">
+         <obj_property name="ElementShortName">Lesser</obj_property>
+         <obj_property name="ObjectShortName">Lesser</obj_property>
+      </wvobject>
+      <wvobject fp_name="/FP16ArithmeticEngine_TB/Unordered" type="logic">
+         <obj_property name="ElementShortName">Unordered</obj_property>
+         <obj_property name="ObjectShortName">Unordered</obj_property>
+      </wvobject>
+   </wvobject>
+</wave_config>
