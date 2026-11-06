@@ -1,0 +1,946 @@
+
+%% ArithmeticArchitectureAnalysis.m
+% Comparative hardware analysis of:
+%
+%   1. IntegerArithmeticEngine       (8-bit)
+%   2. FixedPointArithmeticEngine    (8-bit)
+%   3. FP16ArithmeticEngine          (16-bit, optimized)
+%
+% Input:
+%   ArithmeticArchitecture_Data.csv
+%
+% Outputs:
+%   ArithmeticArchitecture_Results.txt
+%
+%   Figures/Resource_Utilization.png
+%   Figures/Primitive_Composition.png
+%   Figures/Timing_Breakdown.png
+%   Figures/Power_Breakdown.png
+%
+% Notes:
+%   - Resource measurements are compared directly as reported.
+%   - Timing results use different constraint conditions.
+%   - Power estimates are not directly comparable.
+%   - Missing measurements are represented by NaN.
+%   - FP16 power estimation has low confidence.
+
+clear;
+clc;
+close all;
+
+%% 1. Define input and output paths
+
+scriptDirectory = fileparts(mfilename('fullpath'));
+
+projectDirectory = fileparts(scriptDirectory);
+
+dataFile = fullfile( ...
+    projectDirectory, ...
+    'DATA', ...
+    'ArithmeticArchitecture_Data.csv' ...
+);
+
+resultsDirectory = fullfile( ...
+    projectDirectory, ...
+    'Results' ...
+);
+
+resultsFile = fullfile( ...
+    resultsDirectory, ...
+    'ArithmeticArchitecture_Results.txt' ...
+);
+
+figuresDirectory = fullfile( ...
+    resultsDirectory, ...
+    'Figures' ...
+);
+
+assert( ...
+    isfile(dataFile), ...
+    'Input CSV not found: %s', dataFile ...
+);
+
+if ~isfolder(resultsDirectory)
+    mkdir(resultsDirectory);
+end
+
+if ~isfolder(figuresDirectory)
+    mkdir(figuresDirectory);
+end
+%% 2. Import hardware measurement dataset
+
+Data = readtable( ...
+    dataFile, ...
+    'TextType', 'string' ...
+);
+
+% Verify required columns.
+
+requiredColumns = [
+    "Metric"
+    "Integer"
+    "FixedPoint"
+    "FP16"
+];
+
+assert( ...
+    all(ismember(requiredColumns, string(Data.Properties.VariableNames))), ...
+    'The input CSV is missing required columns.' ...
+);
+
+% Normalize metric names.
+
+Data.Metric = strtrim(string(Data.Metric));
+
+% Define architecture names.
+
+engineNames = [
+    "Integer"
+    "Fixed-Point"
+    "FP16"
+];
+
+% Extract numerical measurement columns.
+
+measurementMatrix = [
+    Data.Integer, ...
+    Data.FixedPoint, ...
+    Data.FP16 ...
+];
+
+% Create a metric lookup function.
+
+getMetric = @(metricName) ...
+    measurementMatrix(Data.Metric == string(metricName), :);
+
+% Verify that all required metrics exist exactly once.
+
+requiredMetrics = [
+    "Synthesis LUTs"
+    "Implementation LUTs"
+    "Implementation Slices"
+    "Registers"
+    "DSPs"
+    "CARRY4"
+    "LUT6"
+    "LUT5"
+    "LUT4"
+    "LUT3"
+    "LUT2"
+    "LUT1"
+    "FDRE"
+    "FDSE"
+    "MUXF7"
+    "Longest Register-to-Register Path"
+    "Logic Delay"
+    "Routing Delay"
+    "Logic Levels"
+    "Total On-Chip Power"
+    "Dynamic Power"
+    "Device Static Power"
+    "Slice Logic Power"
+    "Signal Power"
+    "IO Power"
+    "BUFG Power"
+    "Clock Period"
+    "Worst Negative Slack"
+    "Worst Hold Slack"
+];
+
+for k = 1:numel(requiredMetrics)
+
+    assert( ...
+        sum(Data.Metric == requiredMetrics(k)) == 1, ...
+        'A required metric is missing or duplicated: %s', ...
+        char(requiredMetrics(k)) ...
+    );
+
+end
+
+%% 3. Extract resource utilization measurements
+
+resourceMetrics = [
+    "Implementation LUTs"
+    "Implementation Slices"
+    "Registers"
+    "CARRY4"
+    "DSPs"
+];
+
+resourceLabels = [
+    "LUTs"
+    "Slices"
+    "Registers"
+    "CARRY4"
+    "DSPs"
+];
+
+resourceValues = zeros(numel(resourceMetrics), 3);
+
+for k = 1:numel(resourceMetrics)
+
+    resourceValues(k, :) = getMetric(resourceMetrics(k));
+
+end
+
+% Extract key resource measurements.
+
+synthesisLUTs = getMetric("Synthesis LUTs");
+implementationLUTs = getMetric("Implementation LUTs");
+implementationSlices = getMetric("Implementation Slices");
+registers = getMetric("Registers");
+carryResources = getMetric("CARRY4");
+dspResources = getMetric("DSPs");
+
+%% 4. Generate resource utilization figure
+
+figureResource = figure( ...
+    'Color', 'w', ...
+    'Position', [100, 100, 1100, 650], ...
+    'Visible', 'off' ...
+);
+
+bar(resourceValues, 'grouped');
+
+grid on;
+
+set( ...
+    gca, ...
+    'XTick', 1:numel(resourceLabels), ...
+    'XTickLabel', cellstr(resourceLabels), ...
+    'FontSize', 11 ...
+);
+
+xlabel('FPGA Resource Type');
+ylabel('Resource Count');
+
+title( ...
+    'FPGA Resource Utilization Comparison', ...
+    'FontWeight', 'bold' ...
+);
+
+legend( ...
+    cellstr(engineNames), ...
+    'Location', 'northwest' ...
+);
+
+exportgraphics( ...
+    figureResource, ...
+    fullfile(figuresDirectory, 'Resource_Utilization.png'), ...
+    'Resolution', 300 ...
+);
+
+close(figureResource);
+
+%% 5. Extract FPGA primitive measurements
+
+primitiveMetrics = [
+    "LUT6"
+    "LUT5"
+    "LUT4"
+    "LUT3"
+    "LUT2"
+    "LUT1"
+    "CARRY4"
+    "FDRE"
+    "FDSE"
+    "MUXF7"
+];
+
+primitiveValues = zeros(numel(primitiveMetrics), 3);
+
+for k = 1:numel(primitiveMetrics)
+
+    primitiveValues(k, :) = getMetric(primitiveMetrics(k));
+
+end
+
+%% 6. Generate primitive composition figure
+
+figurePrimitive = figure( ...
+    'Color', 'w', ...
+    'Position', [100, 100, 1250, 650], ...
+    'Visible', 'off' ...
+);
+
+bar(primitiveValues, 'grouped');
+
+grid on;
+
+set( ...
+    gca, ...
+    'XTick', 1:numel(primitiveMetrics), ...
+    'XTickLabel', cellstr(primitiveMetrics), ...
+    'FontSize', 10 ...
+);
+
+xlabel('FPGA Primitive Type');
+ylabel('Primitive Count');
+
+title( ...
+    'FPGA Primitive Composition Comparison', ...
+    'FontWeight', 'bold' ...
+);
+
+legend( ...
+    cellstr(engineNames), ...
+    'Location', 'northwest' ...
+);
+
+exportgraphics( ...
+    figurePrimitive, ...
+    fullfile(figuresDirectory, 'Primitive_Composition.png'), ...
+    'Resolution', 300 ...
+);
+
+close(figurePrimitive);
+
+%% 7. Extract timing measurements
+
+pathDelay = getMetric("Longest Register-to-Register Path");
+logicDelay = getMetric("Logic Delay");
+routingDelay = getMetric("Routing Delay");
+logicLevels = getMetric("Logic Levels");
+
+clockPeriod = getMetric("Clock Period");
+worstSetupSlack = getMetric("Worst Negative Slack");
+worstHoldSlack = getMetric("Worst Hold Slack");
+
+% Construct timing breakdown matrix.
+
+timingBreakdown = [
+    logicDelay(:), ...
+    routingDelay(:) ...
+];
+
+% Verify that the timing measurements are complete.
+
+assert( ...
+    all(isfinite(timingBreakdown(:))), ...
+    'One or more timing breakdown measurements are missing.' ...
+);
+
+%% 8. Generate timing breakdown figure
+
+figureTiming = figure( ...
+    'Color', 'w', ...
+    'Position', [100, 100, 1100, 650], ...
+    'Visible', 'off' ...
+);
+
+bar(timingBreakdown, 'stacked');
+
+grid on;
+
+set( ...
+    gca, ...
+    'XTick', 1:3, ...
+    'XTickLabel', cellstr(engineNames), ...
+    'FontSize', 11 ...
+);
+
+xlabel('Arithmetic Architecture');
+ylabel('Delay (ns)');
+
+title( ...
+    'Routed Timing Path Breakdown', ...
+    'FontWeight', 'bold' ...
+);
+
+legend( ...
+    {'Logic Delay', 'Routing Delay'}, ...
+    'Location', 'northwest' ...
+);
+
+% Explain differences in timing measurement conditions.
+
+annotation( ...
+    'textbox', ...
+    [0.13, 0.01, 0.78, 0.07], ...
+    'String', ...
+    ['Integer and Fixed-Point: unconstrained routed paths. ', ...
+     'FP16: worst-slack setup path at a 40 ns clock constraint.'], ...
+    'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'center', ...
+    'FontSize', 9 ...
+);
+
+exportgraphics( ...
+    figureTiming, ...
+    fullfile(figuresDirectory, 'Timing_Breakdown.png'), ...
+    'Resolution', 300 ...
+);
+
+close(figureTiming);
+
+%% 9. Extract power measurements
+
+totalPower = getMetric("Total On-Chip Power");
+dynamicPower = getMetric("Dynamic Power");
+staticPower = getMetric("Device Static Power");
+
+sliceLogicPower = getMetric("Slice Logic Power");
+signalPower = getMetric("Signal Power");
+ioPower = getMetric("IO Power");
+clockPower = getMetric("BUFG Power");
+
+% Construct dynamic and static power breakdown.
+
+powerBreakdown = [
+    dynamicPower(:), ...
+    staticPower(:) ...
+];
+
+assert( ...
+    all(isfinite(powerBreakdown(:))), ...
+    'One or more power breakdown measurements are missing.' ...
+);
+
+%% 10. Generate power breakdown figure
+
+figurePower = figure( ...
+    'Color', 'w', ...
+    'Position', [100, 100, 1100, 650], ...
+    'Visible', 'off' ...
+);
+
+bar(powerBreakdown, 'stacked');
+
+grid on;
+
+set( ...
+    gca, ...
+    'XTick', 1:3, ...
+    'XTickLabel', cellstr(engineNames), ...
+    'FontSize', 11 ...
+);
+
+xlabel('Arithmetic Architecture');
+ylabel('Estimated Power (W)');
+
+title( ...
+    'Estimated On-Chip Power Breakdown', ...
+    'FontWeight', 'bold' ...
+);
+
+legend( ...
+    {'Dynamic Power', 'Device Static Power'}, ...
+    'Location', 'northwest' ...
+);
+
+annotation( ...
+    'textbox', ...
+    [0.12, 0.01, 0.80, 0.07], ...
+    'String', ...
+    ['Power estimates use different operating assumptions. ', ...
+     'FP16 has low estimation confidence.'], ...
+    'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'center', ...
+    'FontSize', 9 ...
+);
+
+exportgraphics( ...
+    figurePower, ...
+    fullfile(figuresDirectory, 'Power_Breakdown.png'), ...
+    'Resolution', 300 ...
+);
+
+close(figurePower);
+
+%% 11. Calculate resource utilization statistics
+
+% Percentage reduction from Integer to Fixed-Point.
+
+fixedPointLUTReduction = ...
+    100 * (implementationLUTs(1) - implementationLUTs(2)) ...
+    / implementationLUTs(1);
+
+fixedPointSliceReduction = ...
+    100 * (implementationSlices(1) - implementationSlices(2)) ...
+    / implementationSlices(1);
+
+fixedPointRegisterReduction = ...
+    100 * (registers(1) - registers(2)) ...
+    / registers(1);
+
+% FP16 resource ratios relative to Integer.
+
+fp16LUTRatio = ...
+    implementationLUTs(3) / implementationLUTs(1);
+
+fp16SliceRatio = ...
+    implementationSlices(3) / implementationSlices(1);
+
+fp16RegisterRatio = ...
+    registers(3) / registers(1);
+
+% FP16 resource ratios relative to Fixed-Point.
+
+fp16FixedPointLUTRatio = ...
+    implementationLUTs(3) / implementationLUTs(2);
+
+fp16FixedPointSliceRatio = ...
+    implementationSlices(3) / implementationSlices(2);
+
+%% 12. Calculate timing statistics
+
+% Percentage of total path delay attributed to routing.
+
+routingPercentage = ...
+    100 * routingDelay ./ pathDelay;
+
+% Percentage of total path delay attributed to logic.
+
+logicPercentage = ...
+    100 * logicDelay ./ pathDelay;
+
+% Integer to Fixed-Point path delay increase.
+
+fixedPointDelayIncrease = ...
+    100 * (pathDelay(2) - pathDelay(1)) / pathDelay(1);
+
+% FP16 clock frequency in MHz.
+
+fp16ClockFrequency = 1000 / clockPeriod(3);
+
+% Approximate setup-limited clock period inferred from
+% the constrained worst-slack path.
+%
+% This is not a separately verified unconstrained Fmax.
+
+fp16EstimatedPeriod = ...
+    clockPeriod(3) - worstSetupSlack(3);
+
+fp16EstimatedFrequency = ...
+    1000 / fp16EstimatedPeriod;
+
+%% 13. Calculate power statistics
+
+% Integer to Fixed-Point estimated power reduction.
+
+fixedPointPowerReduction = ...
+    100 * (totalPower(1) - totalPower(2)) ...
+    / totalPower(1);
+
+% Dynamic power contribution for each architecture.
+
+dynamicPowerPercentage = ...
+    100 * dynamicPower ./ totalPower;
+
+% Static power contribution for each architecture.
+
+staticPowerPercentage = ...
+    100 * staticPower ./ totalPower;
+
+%% 14. Open statistical results file
+
+fileID = fopen(resultsFile, 'w');
+
+assert( ...
+    fileID ~= -1, ...
+    'Unable to create the statistical results file.' ...
+);
+
+%% 15. Write report header
+
+fprintf(fileID, ...
+    'ARITHMETIC ARCHITECTURE COMPARISON\n');
+
+fprintf(fileID, ...
+    '==================================\n\n');
+
+fprintf(fileID, ...
+    'Architectures:\n');
+
+fprintf(fileID, ...
+    '  1. IntegerArithmeticEngine (8-bit)\n');
+
+fprintf(fileID, ...
+    '  2. FixedPointArithmeticEngine (8-bit)\n');
+
+fprintf(fileID, ...
+    '  3. FP16ArithmeticEngine (16-bit, optimized)\n\n');
+
+fprintf(fileID, ...
+    'Source: Vivado synthesis, implementation, timing, and power reports.\n\n');
+
+%% 16. Write resource utilization results
+
+fprintf(fileID, ...
+    '1. RESOURCE UTILIZATION\n');
+
+fprintf(fileID, ...
+    '-----------------------\n\n');
+
+fprintf(fileID, ...
+    '%-27s %12s %12s %12s\n', ...
+    'Metric', 'Integer', 'Fixed-Point', 'FP16');
+
+for k = 1:numel(resourceMetrics)
+
+    fprintf(fileID, ...
+        '%-27s %12.0f %12.0f %12.0f\n', ...
+        char(resourceMetrics(k)), ...
+        resourceValues(k, 1), ...
+        resourceValues(k, 2), ...
+        resourceValues(k, 3) ...
+    );
+
+end
+
+fprintf(fileID, '\n');
+
+fprintf(fileID, ...
+    'Synthesis LUTs: %.0f, %.0f, %.0f\n\n', ...
+    synthesisLUTs(1), ...
+    synthesisLUTs(2), ...
+    synthesisLUTs(3));
+
+fprintf(fileID, ...
+    'Fixed-Point LUT reduction: %.2f%%\n', ...
+    fixedPointLUTReduction);
+
+fprintf(fileID, ...
+    'Fixed-Point slice reduction: %.2f%%\n', ...
+    fixedPointSliceReduction);
+
+fprintf(fileID, ...
+    'Fixed-Point register reduction: %.2f%%\n\n', ...
+    fixedPointRegisterReduction);
+
+fprintf(fileID, ...
+    'FP16 / Integer LUT ratio: %.2fx\n', ...
+    fp16LUTRatio);
+
+fprintf(fileID, ...
+    'FP16 / Integer slice ratio: %.2fx\n', ...
+    fp16SliceRatio);
+
+fprintf(fileID, ...
+    'FP16 / Integer register ratio: %.2fx\n\n', ...
+    fp16RegisterRatio);
+
+fprintf(fileID, ...
+    'FP16 / Fixed-Point LUT ratio: %.2fx\n', ...
+    fp16FixedPointLUTRatio);
+
+fprintf(fileID, ...
+    'FP16 / Fixed-Point slice ratio: %.2fx\n\n', ...
+    fp16FixedPointSliceRatio);
+
+fprintf(fileID, ...
+    'Resource ratios describe different arithmetic widths and capabilities.\n');
+
+fprintf(fileID, ...
+    'They are not normalized per arithmetic operation or throughput.\n\n');
+
+%% 17. Write primitive composition results
+
+fprintf(fileID, ...
+    '2. FPGA PRIMITIVE COMPOSITION\n');
+
+fprintf(fileID, ...
+    '-----------------------------\n\n');
+
+fprintf(fileID, ...
+    '%-15s %12s %12s %12s\n', ...
+    'Primitive', 'Integer', 'Fixed-Point', 'FP16');
+
+for k = 1:numel(primitiveMetrics)
+
+    fprintf(fileID, ...
+        '%-15s %12.0f %12.0f %12.0f\n', ...
+        char(primitiveMetrics(k)), ...
+        primitiveValues(k, 1), ...
+        primitiveValues(k, 2), ...
+        primitiveValues(k, 3) ...
+    );
+
+end
+
+fprintf(fileID, '\n');
+
+%% 18. Write timing analysis results
+
+fprintf(fileID, ...
+    '3. TIMING ANALYSIS\n');
+
+fprintf(fileID, ...
+    '------------------\n\n');
+
+fprintf(fileID, ...
+    '%-27s %12s %12s %12s\n', ...
+    'Metric', 'Integer', 'Fixed-Point', 'FP16');
+
+timingReportMetrics = [
+    "Longest Register-to-Register Path"
+    "Logic Delay"
+    "Routing Delay"
+    "Logic Levels"
+];
+
+timingReportValues = [
+    pathDelay
+    logicDelay
+    routingDelay
+    logicLevels
+];
+
+for k = 1:numel(timingReportMetrics)
+
+    fprintf(fileID, ...
+        '%-37s %12.3f %12.3f %12.3f\n', ...
+        char(timingReportMetrics(k)), ...
+        timingReportValues(k, 1), ...
+        timingReportValues(k, 2), ...
+        timingReportValues(k, 3) ...
+    );
+
+end
+
+fprintf(fileID, '\n');
+
+fprintf(fileID, ...
+    'Logic delay contribution (%%):\n');
+
+fprintf(fileID, ...
+    '  Integer:     %.2f%%\n', logicPercentage(1));
+
+fprintf(fileID, ...
+    '  Fixed-Point: %.2f%%\n', logicPercentage(2));
+
+fprintf(fileID, ...
+    '  FP16:        %.2f%%\n\n', logicPercentage(3));
+
+fprintf(fileID, ...
+    'Routing delay contribution (%%):\n');
+
+fprintf(fileID, ...
+    '  Integer:     %.2f%%\n', routingPercentage(1));
+
+fprintf(fileID, ...
+    '  Fixed-Point: %.2f%%\n', routingPercentage(2));
+
+fprintf(fileID, ...
+    '  FP16:        %.2f%%\n\n', routingPercentage(3));
+
+fprintf(fileID, ...
+    'Fixed-Point path delay increase over Integer: %.2f%%\n\n', ...
+    fixedPointDelayIncrease);
+
+fprintf(fileID, ...
+    'FP16 clock period: %.3f ns\n', ...
+    clockPeriod(3));
+
+fprintf(fileID, ...
+    'FP16 constrained clock frequency: %.3f MHz\n', ...
+    fp16ClockFrequency);
+
+fprintf(fileID, ...
+    'FP16 worst setup slack: %.3f ns\n', ...
+    worstSetupSlack(3));
+
+fprintf(fileID, ...
+    'FP16 worst hold slack: %.3f ns\n', ...
+    worstHoldSlack(3));
+
+fprintf(fileID, ...
+    'FP16 approximate setup-limited period: %.3f ns\n', ...
+    fp16EstimatedPeriod);
+
+fprintf(fileID, ...
+    'FP16 approximate setup-limited frequency: %.3f MHz\n\n', ...
+    fp16EstimatedFrequency);
+
+fprintf(fileID, ...
+    'Timing interpretation:\n');
+
+fprintf(fileID, ...
+    '  Integer and Fixed-Point use unconstrained routed paths.\n');
+
+fprintf(fileID, ...
+    '  FP16 uses the worst-slack setup path from a constrained design.\n');
+
+fprintf(fileID, ...
+    '  These results do not establish a controlled Fmax ranking.\n\n');
+
+%% 19. Write power analysis results
+
+fprintf(fileID, ...
+    '4. POWER ANALYSIS\n');
+
+fprintf(fileID, ...
+    '-----------------\n\n');
+
+fprintf(fileID, ...
+    '%-25s %12s %12s %12s\n', ...
+    'Metric', 'Integer', 'Fixed-Point', 'FP16');
+
+powerReportMetrics = [
+    "Total On-Chip Power"
+    "Dynamic Power"
+    "Device Static Power"
+    "Slice Logic Power"
+    "Signal Power"
+    "IO Power"
+    "BUFG Power"
+];
+
+powerReportValues = [
+    totalPower
+    dynamicPower
+    staticPower
+    sliceLogicPower
+    signalPower
+    ioPower
+    clockPower
+];
+
+for k = 1:numel(powerReportMetrics)
+
+    fprintf(fileID, ...
+        '%-25s %12.3f %12.3f %12.3f\n', ...
+        char(powerReportMetrics(k)), ...
+        powerReportValues(k, 1), ...
+        powerReportValues(k, 2), ...
+        powerReportValues(k, 3) ...
+    );
+
+end
+
+fprintf(fileID, '\n');
+
+fprintf(fileID, ...
+    'Dynamic power contribution (%%):\n');
+
+fprintf(fileID, ...
+    '  Integer:     %.2f%%\n', dynamicPowerPercentage(1));
+
+fprintf(fileID, ...
+    '  Fixed-Point: %.2f%%\n', dynamicPowerPercentage(2));
+
+fprintf(fileID, ...
+    '  FP16:        %.2f%%\n\n', dynamicPowerPercentage(3));
+
+fprintf(fileID, ...
+    'Static power contribution (%%):\n');
+
+fprintf(fileID, ...
+    '  Integer:     %.2f%%\n', staticPowerPercentage(1));
+
+fprintf(fileID, ...
+    '  Fixed-Point: %.2f%%\n', staticPowerPercentage(2));
+
+fprintf(fileID, ...
+    '  FP16:        %.2f%%\n\n', staticPowerPercentage(3));
+
+fprintf(fileID, ...
+    'Integer to Fixed-Point estimated power reduction: %.2f%%\n\n', ...
+    fixedPointPowerReduction);
+
+fprintf(fileID, ...
+    'Power interpretation:\n');
+
+fprintf(fileID, ...
+    '  Estimates use different operating assumptions.\n');
+
+fprintf(fileID, ...
+    '  FP16 power confidence is low due to incomplete activity data.\n');
+
+fprintf(fileID, ...
+    '  FP16 clock power is reported as less than 0.001 W.\n');
+
+fprintf(fileID, ...
+    '  Reported power differences must not be treated as\n');
+
+fprintf(fileID, ...
+    '  controlled power-efficiency comparisons.\n\n');
+
+%% 20. Write overall conclusions
+
+fprintf(fileID, ...
+    '5. OVERALL OBSERVATIONS\n');
+
+fprintf(fileID, ...
+    '-----------------------\n\n');
+
+fprintf(fileID, ...
+    '1. Fixed-Point uses fewer implementation LUTs,\n');
+
+fprintf(fileID, ...
+    '   slices, and registers than Integer.\n\n');
+
+fprintf(fileID, ...
+    '2. FP16 requires more FPGA resources than the\n');
+
+fprintf(fileID, ...
+    '   narrower Integer and Fixed-Point architectures.\n\n');
+
+fprintf(fileID, ...
+    '3. FP16 has a substantially longer reported timing\n');
+
+fprintf(fileID, ...
+    '   path, but timing constraints differ.\n\n');
+
+fprintf(fileID, ...
+    '4. FP16 meets the specified 40 ns clock constraint.\n\n');
+
+fprintf(fileID, ...
+    '5. Power results require consistent switching activity,\n');
+
+fprintf(fileID, ...
+    '   clock settings, and implementation conditions\n');
+
+fprintf(fileID, ...
+    '   before meaningful efficiency rankings can be made.\n\n');
+
+fprintf(fileID, ...
+    '6. A controlled comparison should use matching FPGA\n');
+
+fprintf(fileID, ...
+    '   devices, timing constraints, and workloads.\n\n');
+
+%% 21. Close statistical results file
+
+fclose(fileID);
+
+%% 22. Display analysis summary
+
+fprintf('\n');
+
+fprintf('ARITHMETIC ARCHITECTURE ANALYSIS\n');
+fprintf('================================\n');
+
+fprintf('Architectures analyzed: %d\n', numel(engineNames));
+
+fprintf('\nResource Comparison:\n');
+
+fprintf('  Fixed-Point LUT reduction: %.2f%%\n', ...
+    fixedPointLUTReduction);
+
+fprintf('  FP16 / Integer LUT ratio: %.2fx\n', ...
+    fp16LUTRatio);
+
+fprintf('\nTiming Analysis:\n');
+
+fprintf('  Integer path delay:     %.3f ns\n', pathDelay(1));
+fprintf('  Fixed-Point path delay: %.3f ns\n', pathDelay(2));
+fprintf('  FP16 setup path delay:  %.3f ns\n', pathDelay(3));
+
+fprintf('\nPower Analysis:\n');
+
+fprintf('  Integer total power:     %.3f W\n', totalPower(1));
+fprintf('  Fixed-Point total power: %.3f W\n', totalPower(2));
+fprintf('  FP16 total power:        %.3f W\n', totalPower(3));
+
+fprintf('\nGenerated Results:\n');
+fprintf('  %s\n', resultsFile);
+
+fprintf('\nGenerated Figures:\n');
+
+fprintf('  Resource_Utilization.png\n');
+fprintf('  Primitive_Composition.png\n');
+fprintf('  Timing_Breakdown.png\n');
+fprintf('  Power_Breakdown.png\n');
+
+fprintf('\nAnalysis completed successfully.\n\n');
