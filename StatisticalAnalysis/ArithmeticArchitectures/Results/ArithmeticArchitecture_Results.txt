@@ -1,0 +1,136 @@
+ARITHMETIC ARCHITECTURE COMPARISON
+==================================
+
+Architectures:
+  1. IntegerArithmeticEngine (8-bit)
+  2. FixedPointArithmeticEngine (8-bit)
+  3. FP16ArithmeticEngine (16-bit, optimized)
+
+Source: Vivado synthesis, implementation, timing, and power reports.
+
+1. RESOURCE UTILIZATION
+-----------------------
+
+Metric                           Integer  Fixed-Point         FP16
+Implementation LUTs                  584          521         3163
+Implementation Slices                179          161          919
+Registers                            203          163          446
+CARRY4                                67           70          178
+DSPs                                   0            0            2
+
+Synthesis LUTs: 588, 527, 3223
+
+Fixed-Point LUT reduction: 10.79%
+Fixed-Point slice reduction: 10.06%
+Fixed-Point register reduction: 19.70%
+
+FP16 / Integer LUT ratio: 5.42x
+FP16 / Integer slice ratio: 5.13x
+FP16 / Integer register ratio: 2.20x
+
+FP16 / Fixed-Point LUT ratio: 6.07x
+FP16 / Fixed-Point slice ratio: 5.71x
+
+Resource ratios describe different arithmetic widths and capabilities.
+They are not normalized per arithmetic operation or throughput.
+
+2. FPGA PRIMITIVE COMPOSITION
+-----------------------------
+
+Primitive            Integer  Fixed-Point         FP16
+LUT6                     248          161         1571
+LUT5                      78           85          755
+LUT4                      67           97          603
+LUT3                     104          121          551
+LUT2                     100          105          405
+LUT1                      75           71            2
+CARRY4                    67           70          178
+FDRE                     199          159          442
+FDSE                       4            4            4
+MUXF7                      9            2            5
+
+3. TIMING ANALYSIS
+------------------
+
+Metric                           Integer  Fixed-Point         FP16
+Longest Register-to-Register Path            4.082        4.378       39.571
+Logic Delay                                  1.957        1.941       13.101
+Routing Delay                                2.125        2.437       26.470
+Logic Levels                                 7.000        6.000       56.000
+
+Logic delay contribution (%):
+  Integer:     47.94%
+  Fixed-Point: 44.34%
+  FP16:        33.11%
+
+Routing delay contribution (%):
+  Integer:     52.06%
+  Fixed-Point: 55.66%
+  FP16:        66.89%
+
+Fixed-Point path delay increase over Integer: 7.25%
+
+FP16 clock period: 40.000 ns
+FP16 constrained clock frequency: 25.000 MHz
+FP16 worst setup slack: 0.367 ns
+FP16 worst hold slack: 0.123 ns
+FP16 approximate setup-limited period: 39.633 ns
+FP16 approximate setup-limited frequency: 25.231 MHz
+
+Timing interpretation:
+  Integer and Fixed-Point use unconstrained routed paths.
+  FP16 uses the worst-slack setup path from a constrained design.
+  These results do not establish a controlled Fmax ranking.
+
+4. POWER ANALYSIS
+-----------------
+
+Metric                         Integer  Fixed-Point         FP16
+Total On-Chip Power             16.077       12.463        0.087
+Dynamic Power                   15.785       12.279        0.017
+Device Static Power              0.292        0.185        0.070
+Slice Logic Power                3.293        3.448        0.006
+Signal Power                     2.818        2.930        0.006
+IO Power                         9.675        5.900        0.003
+BUFG Power                       0.006        0.006          NaN
+
+Dynamic power contribution (%):
+  Integer:     98.18%
+  Fixed-Point: 98.52%
+  FP16:        19.54%
+
+Static power contribution (%):
+  Integer:     1.82%
+  Fixed-Point: 1.48%
+  FP16:        80.46%
+
+Integer to Fixed-Point estimated power reduction: 22.48%
+
+Power interpretation:
+  Estimates use different operating assumptions.
+  FP16 power confidence is low due to incomplete activity data.
+  FP16 clock power is reported as less than 0.001 W.
+  Reported power differences must not be treated as
+  controlled power-efficiency comparisons.
+
+5. OVERALL OBSERVATIONS
+-----------------------
+
+1. Fixed-Point uses fewer implementation LUTs,
+   slices, and registers than Integer.
+
+2. FP16 requires more FPGA resources than the
+   narrower Integer and Fixed-Point architectures.
+
+3. FP16 has a substantially longer reported timing
+   path, but timing constraints differ.
+
+4. FP16 meets the specified 40 ns clock constraint.
+
+5. Power results require consistent switching activity,
+   clock settings, and implementation conditions
+   before meaningful efficiency rankings can be made.
+
+6. A controlled comparison should use matching FPGA
+   devices, timing constraints, and workloads.
+
