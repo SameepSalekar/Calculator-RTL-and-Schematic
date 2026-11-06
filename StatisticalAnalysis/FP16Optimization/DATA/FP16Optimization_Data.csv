@@ -1,0 +1,4 @@
+Stage,ImplementedLUTs,OccupiedSlices,SliceRegisters,FlipFlops,Latches,LUT6,LUT5,CARRY4,DSP48E1
+Original,3638,1078,446,426,20,1784,1003,173,2
+Revised,3637,1066,446,446,0,1784,1003,173,2
+Optimized,3163,919,446,446,0,1571,755,178,2
