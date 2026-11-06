@@ -1,0 +1,33 @@
+Category,Metric,Unit,Integer,FixedPoint,FP16
+Resource,Synthesis LUTs,count,588,527,3223
+Resource,Implementation LUTs,count,584,521,3163
+Resource,Implementation Slices,count,179,161,919
+Resource,Registers,count,203,163,446
+Resource,F7 Muxes,count,9,2,5
+Resource,DSPs,count,0,0,2
+Resource,Bonded IOBs,count,51,51,104
+Resource,BUFGCTRL,count,1,1,1
+Primitive,LUT6,count,248,161,1571
+Primitive,LUT5,count,78,85,755
+Primitive,LUT4,count,67,97,603
+Primitive,LUT3,count,104,121,551
+Primitive,LUT2,count,100,105,405
+Primitive,LUT1,count,75,71,2
+Primitive,CARRY4,count,67,70,178
+Primitive,FDRE,count,199,159,442
+Primitive,FDSE,count,4,4,4
+Primitive,MUXF7,count,9,2,5
+Timing,Longest Register-to-Register Path,ns,4.082,4.378,39.571
+Timing,Logic Delay,ns,1.957,1.941,13.101
+Timing,Routing Delay,ns,2.125,2.437,26.47
+Timing,Logic Levels,count,7,6,56
+Power,Total On-Chip Power,W,16.077,12.463,0.087
+Power,Dynamic Power,W,15.785,12.279,0.017
+Power,Device Static Power,W,0.292,0.185,0.07
+Power,Slice Logic Power,W,3.293,3.448,0.006
+Power,Signal Power,W,2.818,2.93,0.006
+Power,IO Power,W,9.675,5.9,0.003
+Power,BUFG Power,W,0.006,0.006,NaN
+Timing,Clock Period,ns,NaN,NaN,40
+Timing,Worst Negative Slack,ns,NaN,NaN,0.367
+Timing,Worst Hold Slack,ns,NaN,NaN,0.123
