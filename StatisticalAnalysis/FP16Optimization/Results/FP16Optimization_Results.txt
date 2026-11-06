@@ -1,0 +1,44 @@
+FP16 ARITHMETIC ENGINE: OPTIMIZATION ANALYSIS
+============================================
+Target: Xilinx Artix-7 xc7a35tcpg236-1
+Tool: Vivado 2026.1
+Source: routed implementation utilization reports
+Stages: Original -> Revised -> Optimized
+
+IMPLEMENTED RESOURCE COUNTS
+Metric                     Original      Revised    Optimized
+ImplementedLUTs                3638         3637         3163
+OccupiedSlices                 1078         1066          919
+SliceRegisters                  446          446          446
+FlipFlops                       426          446          446
+Latches                          20            0            0
+LUT6                           1784         1784         1571
+LUT5                           1003         1003          755
+CARRY4                          173          173          178
+DSP48E1                           2            2            2
+
+PERCENTAGE CHANGE (NEGATIVE = DECREASE)
+Metric                        Orig->Rev         Rev->Opt        Orig->Opt
+ImplementedLUTs                  -0.03%          -13.03%          -13.06%
+OccupiedSlices                   -1.11%          -13.79%          -14.75%
+SliceRegisters                    0.00%            0.00%            0.00%
+FlipFlops                         4.69%            0.00%            4.69%
+Latches                        -100.00%             NaN%         -100.00%
+LUT6                              0.00%          -11.94%          -11.94%
+LUT5                              0.00%          -24.73%          -24.73%
+CARRY4                            0.00%            2.89%            2.89%
+DSP48E1                           0.00%            0.00%            0.00%
+
+ENGINEERING OBSERVATIONS
+- Implemented LUT reduction: 13.06% (475 fewer LUTs).
+- Occupied slice reduction: 14.75% (159 fewer slices).
+- Original to revised: 20 inferred latches eliminated.
+- Total slice registers remain at 446 in every stage.
+- DSP48E1 usage remains at 2; CARRY4 usage increases from 173 to 178.
+
+LIMITATIONS
+- Stages are discrete design revisions, not equal time intervals.
+- Percentage change from a zero baseline is undefined (NaN).
+- Timing and power are excluded until comparable stage reports are verified.
+- Resource changes alone do not establish functional equivalence.
+- Stage changes may reflect RTL changes and implementation effects.
