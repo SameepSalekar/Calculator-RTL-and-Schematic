@@ -1,51 +1,38 @@
-# Sequential Operand Entry
+# Divider Controller
 
-**SequentialOperandEntry** converts one numeric literal into the representation selected by the user. In the expression-capable Proteus calculator, **ExpressionEvaluator** calls it for each literal. The converter accepts a buffer of decimal digits and an optional decimal point, along with the sign and numerical mode. It returns an encoded integer, fixed-point, or FP16 value and its conversion status.
+**DividerController** sequences the load, iteration, and completion phases of the parameterized divider used by the integer and fixed-point arithmetic engines in Proteus. It accepts a **START** request, checks for a zero divisor, and waits for **CountDone** when the datapath performs a division.
 
 ## Architecture and significance
 
-The converter separates decimal parsing from numerical encoding. **DIGIT** reads one token at a time, beginning with the low nibble of the input buffer. **ADD_DIGIT** updates the accumulated decimal magnitude. Digits after the decimal point also increase the divisor by a factor of ten. For example, 2.5 becomes a magnitude of 25 and a divisor of 10.
+The normal path separates operand loading from iteration. **LOAD** gives the divider datapath one cycle to initialize its working registers. **RUN** asserts **step** so the datapath can update the quotient and remainder on successive rising edges. The controller stays in RUN until CountDone is high, then enters **DONE_STATE** to signal completion.
 
-The selected mode determines how that ratio is encoded. Integer mode requires an exact whole number. Fixed-point mode scales the magnitude by the configured number of fractional bits. For a nonzero FP16 value, the converter searches for the binary exponent before preparing the division.
-
-The division loop uses three states per quotient bit. **DIV_LOW** computes the lower subtraction. **DIV_HIGH** uses the lower subtraction’s borrow to compute the upper subtraction. **DIV_COMMIT** updates the remainder and appends one quotient bit. Splitting the subtraction across clock cycles reduces the amount of arithmetic that must settle in a single cycle. The rounding states then use the remainder to implement round-to-nearest, ties-to-even where rounding applies.
+The divide-by-zero path goes directly from **IDLE** to DONE_STATE. It asserts **ERROR** while the invalid request is present in IDLE and skips both loading and iteration. The enclosing divider can latch that error at the same edge that takes the controller into DONE_STATE. Both paths use the same one-cycle **DONE** signal.
 
 ## FSM type
 
-**Moore-style FSM for completion control.** The FSM registers **done** when it executes **PUBLISH**. The pulse is visible for one cycle as the FSM returns to IDLE. Both successful and rejected conversions pass through PUBLISH, giving the evaluator one completion event to wait for.
+**Mealy-type FSM.** ERROR depends on both the present state and the live START and DivideByZero inputs. The other control outputs are Moore-style.
 
-| Output | What drives it |
-|---|---|
-| done | Registered high on the edge that leaves PUBLISH. |
-| encoded | Holds the numeric representation produced by FORMAT for a successful conversion. |
-| valid and error | Indicate whether the conversion produced a usable value. |
-| overflow, underflow, and inexact | Report conversion conditions for the selected numerical mode. |
-
-The evaluator samples the encoded value and status when done is high.
+| Output | Style | When it is high |
+|---|---|---|
+| ERROR | Mealy | In IDLE when START and DivideByZero are both high. |
+| load | Moore | During LOAD. |
+| step | Moore | During RUN. |
+| BUSY | Moore | During LOAD and RUN. |
+| DONE | Moore | During DONE_STATE. |
 
 ## State transitions
 
 | Present state | Condition → next state | Main action |
 |---|---|---|
-| IDLE | start with a valid request → DIGIT<br>start with an invalid request → PUBLISH | Latch the input buffer, length, sign, and mode. |
-| DIGIT | Decimal digit → ADD_DIGIT<br>First decimal point → DIGIT<br>Buffer consumed → PREPARE<br>Invalid symbol → PUBLISH | Consume the next nibble and track whether the decimal point has appeared. |
-| ADD_DIGIT | Magnitude fits → DIGIT<br>Magnitude overflow → PUBLISH | Update the decimal magnitude and, for a fractional digit, the divisor. |
-| PREPARE | Invalid literal → PUBLISH<br>Nonzero FP16 value → EXP_COMPARE<br>Other valid value → DIV_PREPARE | Check that the literal has digits, validate the sign, and set up scaling. |
-| EXP_COMPARE | Next rising edge → EXP_UPDATE | Register the result of the exponent trial comparison. |
-| EXP_UPDATE | Another exponent trial needed → EXP_COMPARE<br>Exponent found → DIV_PREPARE<br>FP16 exponent overflow → PUBLISH | Adjust the exponent search or set the final scaling shifts. |
-| DIV_PREPARE | Next rising edge → DIV_LOW | Initialize the scaled dividend, denominator, quotient, and remainder. |
-| DIV_LOW | Next rising edge → DIV_HIGH | Subtract the lower portion of the denominator. |
-| DIV_HIGH | Next rising edge → DIV_COMMIT | Subtract the upper portion using the lower subtraction’s borrow. |
-| DIV_COMMIT | More quotient bits → DIV_LOW<br>Last quotient bit → ROUND_COMPARE | Update the remainder and commit one quotient bit. |
-| ROUND_COMPARE | Next rising edge → ROUND_ADD | Compare twice the remainder against the denominator. Use the quotient’s low bit to break ties. |
-| ROUND_ADD | Next rising edge → FORMAT | Apply the rounding increment. |
-| FORMAT | Next rising edge → PUBLISH | Pack the selected numeric representation or report a conversion error. |
-| PUBLISH | Next rising edge → IDLE | Assert done for one cycle. |
+| IDLE | START with DivideByZero low → LOAD<br>START with DivideByZero high → DONE_STATE | Accept a normal request or assert ERROR for a zero divisor. |
+| LOAD | Next rising edge → RUN | Assert load and BUSY while the datapath initializes. |
+| RUN | CountDone high → DONE_STATE | Assert step and BUSY. Stay in RUN while CountDone is low. |
+| DONE_STATE | Next rising edge → IDLE | Assert DONE for one cycle with BUSY low. |
 
-Synchronous **reset** or **cancel** takes priority from any state and clears the published outputs.
+Synchronous **reset** takes priority on the rising edge and returns the controller to IDLE. IDLE holds while START is low.
 
 ## Worked example
 
-For 2.5 in the default fixed-point format, the parser builds a magnitude of 25 and a divisor of 10. With four fractional bits, the converter scales the dividend by 16 and divides 400 by 10. The quotient is 40 with zero remainder.
+For 13 ÷ 3 in integer mode, START takes the controller from IDLE to LOAD. The datapath loads the operands, then updates the quotient and remainder during RUN. When CountDone is sampled high, the controller enters DONE_STATE and pulses DONE. The integer datapath produces a quotient of 4 and a remainder of 1.
 
-FORMAT stores 40 as the raw fixed-point encoding, which is 0x28 in hexadecimal and represents 2.5. PUBLISH then pulses done with valid high, allowing ExpressionEvaluator to push the encoded value onto its value stack.
+For 13 ÷ 0, ERROR asserts in IDLE as soon as START and DivideByZero are both high. At the next rising edge, the controller enters DONE_STATE and asserts DONE without running the division loop. The controller’s ERROR output goes low in DONE_STATE, so the enclosing divider latches the error to carry it through completion.
