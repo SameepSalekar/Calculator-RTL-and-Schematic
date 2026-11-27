@@ -1,42 +1,43 @@
 # User Interface Controller
 
-The **UserInterfaceController** guides a calculation on the Proteus FPGA calculator. It handles numerical mode and operation selection, controls the entry and capture of operands A and B, starts the arithmetic operation, and waits for completion.
+The **UserInterfaceController** manages the keypad workflow for the Proteus FPGA calculator. It lets the user select a numerical mode, enter and edit an expression, submit it for evaluation, and start a new expression after a result or error.
 
 ## Architecture and significance
 
-The controller separates operand entry from operand capture. **EntryConfirmed** indicates that the user has finished entering a number. The controller then waits for the encoder to assert **OperandValid**. Once the value is ready and there is no encoding error, the controller asserts **OperandCapture**. This separation gives the encoder time to finish and ensures that the operand register receives a validated value. **OperandSelect** directs the capture to operand A or B.
+The controller stores the expression in **ExpressionTokens** and tracks its length with **TokenCount**. Each digit or symbol occupies one token, and the buffer holds up to 32 tokens. The physical keypad has 16 keys, so the controller uses **SymbolPending** to indicate that the next digit key selects a symbol. This makes parentheses, arithmetic operators, and comparison symbols available through the existing keypad.
 
-The execution path has separate start and wait states. **STATE_EXECUTE** asserts **ArithmeticStart** for one clock cycle. **STATE_WAIT** keeps the interface busy until the arithmetic subsystem signals completion. In **STATE_RESULT**, the user can start another calculation with the same mode and operation or return to mode selection.
+The controller separates expression entry from evaluation. In **STATE_START**, it waits until the evaluator can accept the expression, then asserts **EvaluateStart**. Once the request is accepted, **STATE_WAIT** holds the expression and numerical mode stable until **EvaluatorDone** arrives. The evaluator handles syntax, BODMAS, and the limits of six numeric operands and three parenthesis pairs.
+
+**ExpressionEntryActive** tells ProteusSystemIntegration when to send live edits to the LCD. The LCD shows up to 20 characters at once and follows the newest tokens as the expression grows. Pressing C removes the last token or cancels a pending symbol prefix. Pressing # submits the expression and leaves it visible while evaluation runs.
 
 ## FSM type
 
-**Mealy-type FSM.** Some outputs depend on the present state and live inputs. Others are Moore-style because the present state alone determines them.
+**Mealy-type FSM.** EvaluateStart depends on the present state and the live evaluator busy and clear signals. Several interface outputs are Moore-style because they depend only on CurrentState.
 
 | Output | Style | What drives it |
 |---|---|---|
-| OperandCapture | Mealy | In either capture state, it asserts when OperandValidationPending and OperandValid are high and OperandEncodingError is low. |
-| ArithmeticStart | Moore | It is high during STATE_EXECUTE. |
-| InterfaceDone | Moore | It remains high while the controller is in STATE_RESULT. |
+| EvaluateStart | Mealy | Asserts in STATE_START when EvaluatorBusy and EvaluateClear are both low. |
+| ExpressionEntryActive | Moore | Asserts while the controller is in STATE_EXPRESSION_ENTRY. |
+| InterfaceBusy | Moore | Asserts in STATE_START and STATE_WAIT. |
+| InterfaceDone | Moore | Remains high while the controller is in STATE_RESULT. |
 
 ## State transitions
 
-A key in the table means KeyPressed is high and KeyCode matches that key. Conditions within a row are listed in priority order. The controller holds its state when no listed condition applies.
+A key label represents a KeyPressed event with the corresponding KeyCode. The controller holds its current state when no transition applies.
 
 | Present state | Condition → next state | Main action |
 |---|---|---|
-| STATE_MODE_SELECT | # → STATE_OPERATION_SELECT | Keys A and B change the numerical mode while the controller stays in this menu. |
-| STATE_OPERATION_SELECT | # → STATE_OPERAND_A<br>C → STATE_MODE_SELECT | Keys A and B change the operation. Pressing # clears the entry buffer before operand A entry. |
-| STATE_OPERAND_A | EntryError → STATE_ERROR<br>EntryConfirmed → STATE_OPERAND_A_CAPTURE | Enable entry for A. Set OperandValidationPending on confirmation. |
-| STATE_OPERAND_A_CAPTURE | OperandEncodingError → STATE_ERROR<br>OperandValidationPending and OperandValid → STATE_OPERAND_B<br>C → STATE_OPERAND_A | Capture A and clear the entry buffer on valid encoding. Pressing C clears the buffer and allows a retry. |
-| STATE_OPERAND_B | EntryError → STATE_ERROR<br>EntryConfirmed → STATE_OPERAND_B_CAPTURE | Enable entry for B. Set OperandValidationPending on confirmation. |
-| STATE_OPERAND_B_CAPTURE | OperandEncodingError → STATE_ERROR<br>OperandValidationPending and OperandValid → STATE_EXECUTE<br>C → STATE_OPERAND_B | Capture B on valid encoding. Pressing C clears the buffer and allows a retry. |
-| STATE_EXECUTE | Next rising edge → STATE_WAIT | Assert ArithmeticStart during this state and set ExecutionStarted at the rising edge. |
-| STATE_WAIT | ArithmeticDone and ExecutionStarted → STATE_RESULT | Keep InterfaceBusy high while waiting. Clear ExecutionStarted on completion. |
-| STATE_RESULT | # → STATE_OPERAND_A<br>\* → STATE_MODE_SELECT | Assert InterfaceDone. Either key clears the entry and arithmetic state before moving on. |
-| STATE_ERROR | # → STATE_MODE_SELECT | Assert InterfaceError. Pressing # clears the entry and arithmetic state and returns to mode selection. |
+| STATE_MODE_SELECT | HASH → STATE_EXPRESSION_ENTRY | A and B cycle through integer, fixed-point, and FP16 modes. HASH confirms the selection. |
+| STATE_EXPRESSION_ENTRY | HASH with a nonempty buffer, no pending symbol prefix, and no entry error → STATE_START | Digit keys enter numbers or symbols. D toggles symbol selection. C cancels symbol selection or deletes the last token. |
+| STATE_START | EvaluateStart → STATE_WAIT | Submit the expression once the evaluator is available. |
+| STATE_WAIT | EvaluatorDone with EvaluatorError low → STATE_RESULT<br>EvaluatorDone with EvaluatorError high → STATE_ERROR | Wait for the evaluator to finish the whole expression. |
+| STATE_RESULT | HASH → STATE_EXPRESSION_ENTRY | Clear the token buffer and start a new expression in the same numerical mode. |
+| STATE_ERROR | HASH → STATE_EXPRESSION_ENTRY | Clear the token buffer and allow a fresh entry in the same numerical mode. |
 
-Synchronous reset or Clear takes priority from any state. On the rising edge, it returns the controller to STATE_MODE_SELECT with integer mode and addition selected.
+Synchronous reset or Clear returns the controller to STATE_MODE_SELECT and selects integer mode. Pressing STAR outside the mode menu also clears the expression and returns to mode selection. It preserves the selected numerical mode and asserts EvaluateClear to cancel any evaluation in progress.
 
-## Example calculation
+## Worked example
 
-To calculate 12 + 4, select integer addition and enter 12 as operand A. After confirmation, the controller waits in **STATE_OPERAND_A_CAPTURE** until the encoder reports a valid value. It captures A and clears the entry buffer for B. After the same sequence validates and captures 4, the controller issues one ArithmeticStart pulse. It then waits for **ArithmeticDone** with ExecutionStarted set before entering STATE_RESULT.
+To enter (10 + 2) × 3, select integer mode with HASH. Use D followed by 5 for the opening parenthesis, D followed by 1 for addition, D followed by 6 for the closing parenthesis, and D followed by 3 for multiplication. The LCD shows (10+2)*3 as the tokens are entered.
+
+Press HASH to submit the expression. The controller waits while the evaluator adds 10 and 2, then multiplies the sum by 3. When EvaluatorDone arrives without an error, the controller enters STATE_RESULT. The final value is 36 in decimal, displayed as 00000024 on the LCD in hexadecimal with the default 32-bit result width.
